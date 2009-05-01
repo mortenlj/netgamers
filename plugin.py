@@ -69,23 +69,17 @@ class NetGamers(callbacks.Plugin):
                     return None
         return msg
 
-    def _getNetworkRegistryValue(self, network, key):
-        try:
-            return self.registryValue("%s.%s" % (network, key))
-        except NonExistentRegistryEntry:
-            return None
-        
     def _getReggedNick(self, network):
-        return self._getNetworkRegistryValue(network, "reggedNick")
+        return self.registryValue("reggedNick")
 
     def _getReggedPassword(self, network):
-        return self._getNetworkRegistryValue(network, "password")
+        return self.registryValue("password")
 
     def _getUseRegged(self, network):
-        return self._getNetworkRegistryValue(network, "useRegged")
+        return self.registryValue("useRegged")
 
     def _getBotNick(self, network):
-        return self._getNetworkRegistryValue(network, 'botNick')
+        return self.registryValue('botNick')
 
     def isBotNick(self, network, nick):
         """Compare a nick from a message with the current BotNick.
@@ -137,6 +131,10 @@ class NetGamers(callbacks.Plugin):
             self.sentGhost = time.time()
 
     def __call__(self, irc, msg):
+        enabled = "NetGamers"
+        if irc.network not in enabled or \
+           irc.state.supported.get('NETWORK', '') not in enabled:
+            return
         self.__parent.__call__(irc, msg)
         nick = self._getReggedNick(irc.network)
         botnick = self._getBotNick(irc.network)

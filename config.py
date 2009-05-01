@@ -33,62 +33,35 @@ import supybot.conf as conf
 import supybot.ircutils as ircutils
 import supybot.registry as registry
 
-def registerNetwork(network, enable=True):
-    base = conf.supybot.plugins.NetGamers
-    base.register(network, registry.Boolean(enable, """Determines if the network is enabled."""))
-    return base.get(network)
-
-def registerVariable(network, key, value, private=False):
-    base = conf.supybot.plugins.NetGamers
-    try:
-        network_node = base.get(network)
-    except registry.NonExistentRegistryEntry:
-        network_node = registerNetwork(network)
-    node = network_node.register(key, registry.String(value, "", private=private))
-    if value:
-        node.setValue(value)
-
 def configure(advanced):
     from supybot.questions import expect, anything, something, yn
     conf.registerPlugin('NetGamers', True)
-    network = something('What is the name of the network you will be using?')
-    reggednick = something('What is your registered nick?')
-    registerVariable(network, "reggedNick", reggednick)
+    reggednick = something('What is the bots registered nick?')
+    conf.supybot.plugins.NetGamers.reggedNick.setValue(reggednick)
     use_regged_nick = yn("Do you use the regged nick?", default=True)
-    registerVariable(network, "useRegged", use_regged_nick)
-    password = something('What is your password for that nick?')
-    registerVariable(network, "password", password, True)
+    conf.supybot.plugins.NetGamers.useRegged.setValue(use_regged_nick)
+    password = something('What is the password for that nick?')
+    conf.supybot.plugins.NetGamers.password.setValue(password)
     botnick = something('What is the services Bot named?', default='P@cservice.netgamers.org')
-    registerVariable(network, "botNick", botnick)
+    conf.supybot.plugins.NetGamers.botNick.setValue(botnick)
 
 NetGamers = conf.registerPlugin('NetGamers')
 
-def isNickAtServer(value):
-    """Checks if the value is a valid nick followed by a server, separated by an @."""
-    if "@" in value:
-        nick, server = value.split("@", 1)
-        return ircutils.isNick(nick) and isServer(server)
-    return False
+conf.registerGlobalValue(NetGamers, "reggedNick",
+    registry.String("", """The bots registered nick on the NetGamers network.
+    Nicks can be registered at http://www.netgamers.org."""))
 
-_serverPattern = re.compile("\w+(?:\.\w+)*")
-def isServer(value):
-    """Checks if the value is a valid hostname."""
-    return _serverPattern.match(value) is not None
+conf.registerGlobalValue(NetGamers, "useRegged",
+    registry.Boolean(False, """Determines if the regged neck should be 
+    used as the bots actual nick on the network."""))    
 
-class ValidNickOrEmptyString(registry.String):
-    def setValue(self, v):
-        if v:
-            if not ircutils.isNick(v) and not isNickAtServer(v):
-                raise registry.InvalidRegistryValue, \
-                      'Value must be a valid nick or the empty string.'
-        registry.String.setValue(self, v)
-
-class ValidNickSet(conf.ValidNicks):
-    List = ircutils.IrcSet
-
-class Networks(registry.SpaceSeparatedSetOfStrings):
-    List = ircutils.IrcSet
-
+conf.registerGlobalValue(NetGamers, "password",
+    registry.String("", """The password to use when identifying with P."""))
+    
+conf.registerGlobalValue(NetGamers, "botNick",
+    registry.String("P@cservice.netgamers.org", """The nick/server used by the services
+    bot on the network. On NetGamers,this is P@cservice.netgamers.org."""))
+    
 conf.registerGlobalValue(NetGamers, 'noJoinsUntilIdentified',
     registry.Boolean(False, """Determines whether the bot will not join any
     channels until it is identified.  This may be useful, for instances, if
