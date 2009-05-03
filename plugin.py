@@ -59,6 +59,13 @@ class NetGamers(callbacks.Plugin):
         self.identified = False
         self.waitingJoins = []
 
+    def callCommand(self, command, irc, msg, *args, **kwargs):
+        """Make sure we're on an enabled network before proceeding."""
+        if self._isEnabled(irc):
+            self.__parent.callCommand(command, irc, msg, *args, **kwargs)
+        else:
+            self.log.info("Intercepted command %s on %s", command, irc.network)
+    
     def outFilter(self, irc, msg):
         if msg.command == 'JOIN':
             if not self.identified:
@@ -93,7 +100,13 @@ class NetGamers(callbacks.Plugin):
             botnick, server = botnick.split("@", 1)
         return botnick and ircutils.strEqual(nick, botnick)
 
+    def _isEnabled(self, irc):
+        enabledNetworks = ("NetGamers",)
+        return irc.network in enabledNetworks or irc.state.supported.get('NETWORK', '') in enabledNetworks
+
     def _doIdentify(self, irc, nick=None):
+        if not self._isEnabled(irc):
+            return
         if nick is None:
             nick = self._getReggedNick(irc.network)
         botnick = self._getBotNick(irc.network)
@@ -110,6 +123,8 @@ class NetGamers(callbacks.Plugin):
         irc.sendMsg(ircmsgs.privmsg(botnick, identify))
 
     def _doGhost(self, irc, nick=None):
+        if not self._isEnabled(irc):
+            return
         if nick is None:
             nick = self._getReggedNick(irc.network)
         botnick = self._getBotNick(irc.network)
@@ -131,9 +146,7 @@ class NetGamers(callbacks.Plugin):
             self.sentGhost = time.time()
 
     def __call__(self, irc, msg):
-        enabled = "NetGamers"
-        if irc.network not in enabled or \
-           irc.state.supported.get('NETWORK', '') not in enabled:
+        if not self._isEnabled(irc):
             return
         self.__parent.__call__(irc, msg)
         nick = self._getReggedNick(irc.network)
@@ -150,6 +163,8 @@ class NetGamers(callbacks.Plugin):
                         irc.sendMsg(ircmsgs.nick(nick)) # 433 is handled elsewhere.
 
     def do001(self, irc, msg):
+        if not self._isEnabled(irc):
+            return
         # New connection, make sure sentGhost is False.
         self.sentGhost = None
 
@@ -199,6 +214,8 @@ class NetGamers(callbacks.Plugin):
         return bool('killed' in lowered and (nick in s or 'ghost' in lowered))
 
     def doNotice(self, irc, msg):
+        if not self._isEnabled(irc):
+            return
         if irc.afterConnect:
             botnick = self._getBotNick(irc.network)
             if botnick and self.isBotNick(irc.network, msg.nick):
@@ -310,6 +327,8 @@ class NetGamers(callbacks.Plugin):
                 irc.sendMsg(ircmsgs.privmsg(botnick, 'voice %s' % channel))
 
     def doMode(self, irc, msg):
+        if not self._isEnabled(irc):
+            return
         on = 'on %s' % irc.network
         if self.isBotNick(irc.network, msg.nick):
             channel = msg.args[0]
@@ -330,6 +349,8 @@ class NetGamers(callbacks.Plugin):
             self.checkPrivileges(irc, channel)
 
     def _botCommand(self, irc, channel, command, log=False):
+        if not self._isEnabled(irc):
+            return
         botnick = self._getBotNick(irc.network)
         if botnick:
             msg = ircmsgs.privmsg(botnick, ' '.join([command, channel, irc.nick]))
