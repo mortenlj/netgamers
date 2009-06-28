@@ -200,7 +200,6 @@ class NetGamers(callbacks.Plugin):
         self.channels.append(msg.args[1])
 
     def doNick(self, irc, msg):
-        self.log.debug("doNick called: irc=%r, msg=%r" % (irc, msg)) # I have no idea when this gets called, and don't really know what it should be doing when it happens
         nick = self._getReggedNick(irc.network)
         if nick:
             if ircutils.strEqual(msg.args[0], irc.nick) and ircutils.strEqual(irc.nick, nick):
@@ -412,6 +411,12 @@ class NetGamers(callbacks.Plugin):
         channel = msg.args[1]
         on = 'on %s' % irc.network
         self.log.info('%s is +i, attempting Bot invite %s.', channel, on)
+        self._botCommand(irc, channel, 'invite', log=True)
+
+    def do475(self, irc, msg):
+        channel = msg.args[1]
+        on = 'on %s' % irc.network
+        self.log.info('%s is +k, attempting Bot invite to get around %s.', channel, on)
         self._botCommand(irc, channel, 'invite', log=True)
 
     def invite(self, irc, msg, args, channel):
